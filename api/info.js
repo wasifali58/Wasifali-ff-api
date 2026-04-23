@@ -1,6 +1,5 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { translate } from '@vitalets/google-translate-api';
 
 function cleanLabel(label) {
   return label.replace(/[^\x00-\x7F]/g, '').trim();
@@ -19,9 +18,14 @@ async function freefire(uid) {
   try {
     const { data } = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
       },
-      timeout: 10000
+      timeout: 15000
     });
 
     const $ = cheerio.load(data);
@@ -49,25 +53,26 @@ async function freefire(uid) {
         let fullText = $(li).text().trim();
         let value = fullText.replace(strong.text(), '').trim();
         
-        if (value && !/^[a-zA-Z0-9\s\-_,.!?]+$/.test(value)) {
-          try {
-            const translated = await translate(value, { to: 'en' });
-            value = translated.text;
-          } catch (err) {}
-        }
-        
         value = cleanValue(label, value);
         playerInfo[label] = value;
       }
+    }
+    
+    if (Object.keys(playerInfo).length === 0) {
+      return {
+        status: "error",
+        message: "No data found for this UID"
+      };
     }
     
     playerInfo.status = "success";
     return playerInfo;
     
   } catch (error) {
+    console.error('Error:', error.message);
     return {
       status: "error",
-      message: error.message
+      message: "Failed to fetch player data. Please check UID or try again later."
     };
   }
 }
@@ -79,24 +84,57 @@ function addDeveloperInfo(response) {
 }
 
 export default async function handler(req, res) {
-  // Enable CORS
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'application/json');
   
+  // Handle preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
   
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    return res.status(405).json(addDeveloperInfo({
+      status: "error",
+      message: "Method not allowed. Use GET request."
+    }));
+  }
+  
+  // Home route
+  if (req.url === '/' || req.url === '') {
+    return res.status(200).json(addDeveloperInfo({
+      status: "ok",
+      message: "Free Fire API is running",
+      endpoints: {
+        info: "/api/info?uid=YOUR_UID",
+        home: "/"
+      },
+      example: "/api/info?uid=123456789"
+    }));
+  }
+  
+  // Get UID from query
   const { uid } = req.query;
   
   if (!uid) {
     return res.status(400).json(addDeveloperInfo({
       status: "error",
-      message: "UID is required"
+      message: "UID is required. Use: /api/info?uid=YOUR_UID"
     }));
   }
   
+  // Validate UID (only numbers)
+  if (!/^\d+$/.test(uid)) {
+    return res.status(400).json(addDeveloperInfo({
+      status: "error",
+      message: "UID must contain only numbers"
+    }));
+  }
+  
+  // Fetch player data
   const data = await freefire(uid);
   return res.status(200).json(addDeveloperInfo(data));
 }
