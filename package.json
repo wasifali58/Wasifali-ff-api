@@ -2,9 +2,19 @@
   "name": "freefire-api",
   "version": "1.0.0",
   "type": "module",
+  "description": "Free Fire Player Info API by WASIF ALI",
+  "main": "api/info.js",
+  "engines": {
+    "node": "18.x"
+  },
+  "scripts": {
+    "dev": "node api/info.js"
+  },
   "dependencies": {
-    "axios": "^1.6.0",
-    "cheerio": "^1.0.0-rc.12",
-    "@vitalets/google-translate-api": "^9.2.0"
-  }
+    "axios": "^1.6.5",
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "author": "WASIF ALI",
+  "license": "MIT",
+  "keywords": ["freefire", "api", "gaming"]
 }
