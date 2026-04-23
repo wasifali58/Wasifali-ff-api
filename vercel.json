@@ -1,17 +1,7 @@
 {
   "functions": {
-    "api/index.js": {
+    "api/info.js": {
       "runtime": "nodejs18.x"
     }
-  },
-  "routes": [
-    {
-      "src": "/info(.*)",
-      "dest": "/api/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/api/index.js"
-    }
-  ]
+  }
 }
